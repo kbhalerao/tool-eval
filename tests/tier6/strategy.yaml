@@ -1,0 +1,313 @@
+# Tier 6: Strategic Tool Selection
+# Tests whether models choose optimal research strategy based on user intent.
+# All 3 tools presented; model must pick the right strategy AND construct deep schema.
+
+# =============================================================================
+# Discovery / Availability → product_first_search
+# =============================================================================
+
+- id: t6_discovery_basic
+  tier: 6
+  prompt: "What corn hybrids are available for my farm near Ames, Iowa?"
+  expected_tool: product_first_search
+  expected_args:
+    query: "corn hybrids available"
+    location:
+      name: "Ames, Iowa"
+    filters:
+      crop: "corn"
+  tags: ["strategy", "discovery", "product_first"]
+  notes: "available + for my farm = discovery intent, not performance"
+
+- id: t6_discovery_brand
+  tier: 6
+  prompt: "I've heard good things about Pioneer. What do they have for soybeans in central Illinois?"
+  expected_tool: product_first_search
+  expected_args:
+    query: "Pioneer soybeans"
+    location:
+      name: "central Illinois"
+    filters:
+      crop: "soybeans"
+      brands: ["Pioneer"]
+  tags: ["strategy", "brand_validation", "product_first"]
+  notes: "Known brand lookup = product_first, not trial search"
+
+- id: t6_discovery_traits
+  tier: 6
+  prompt: "Show me VT2P corn options within 50 miles of Story County"
+  expected_tool: product_first_search
+  expected_args:
+    query: "VT2P corn"
+    location:
+      name: "Story County"
+      radius_miles: 50
+    filters:
+      crop: "corn"
+      traits: ["VT2P"]
+  tags: ["strategy", "trait_filter", "product_first"]
+  notes: "Show me options = discovery, trait is a filter not performance criteria"
+
+- id: t6_discovery_what_can_i_get
+  tier: 6
+  prompt: "What can I get for my operation? I'm in Champaign County, Illinois and need corn."
+  expected_tool: product_first_search
+  expected_args:
+    query: "corn for operation"
+    location:
+      name: "Champaign County, Illinois"
+    filters:
+      crop: "corn"
+  tags: ["strategy", "availability", "product_first"]
+  notes: "What can I get is availability language, not performance"
+
+# =============================================================================
+# Performance / Analytics → trial_first_search
+# =============================================================================
+
+- id: t6_performance_winning
+  tier: 6
+  prompt: "What's been winning in trials around Story County for corn?"
+  expected_tool: trial_first_search
+  expected_args:
+    query: "winning corn trials"
+    location:
+      name: "Story County"
+    filters:
+      crop: "corn"
+    rank_by: "yield_advantage"
+  tags: ["strategy", "performance", "trial_first"]
+  notes: "winning in trials = performance-focused, trial_first"
+
+- id: t6_performance_soil
+  tier: 6
+  prompt: "Best soybeans for heavy clay ground in eastern Iowa"
+  expected_tool: trial_first_search
+  expected_args:
+    query: "soybeans for clay soil"
+    location:
+      name: "eastern Iowa"
+    filters:
+      crop: "soybeans"
+      conditions:
+        soil_types: ["clay"]
+  tags: ["strategy", "condition_specific", "trial_first"]
+  notes: "Soil-specific = condition analysis = trial_first"
+
+- id: t6_performance_consistency
+  tier: 6
+  prompt: "I want something reliable, not a gamble. Most consistent corn performers near Des Moines?"
+  expected_tool: trial_first_search
+  expected_args:
+    query: "consistent corn performers"
+    location:
+      name: "Des Moines"
+    filters:
+      crop: "corn"
+    rank_by: "consistency"
+  tags: ["strategy", "consistency", "trial_first"]
+  notes: "reliable, not gamble + consistent = rank by consistency"
+
+- id: t6_performance_top_percentile
+  tier: 6
+  prompt: "Show me the top 30% yielding corn hybrids from 2024 trials in northern Illinois"
+  expected_tool: trial_first_search
+  expected_args:
+    query: "top yielding corn 2024"
+    location:
+      name: "northern Illinois"
+    filters:
+      crop: "corn"
+      conditions:
+        years: [2024]
+      yield_thresholds:
+        top_percentile: 30
+    rank_by: "top_percentile"
+  tags: ["strategy", "analytics", "trial_first"]
+  notes: "Specific percentile + year = analytics query"
+
+- id: t6_performance_dryland
+  tier: 6
+  prompt: "What performs best under dryland conditions? Looking at corn for southwest Kansas."
+  expected_tool: trial_first_search
+  expected_args:
+    query: "dryland corn performance"
+    location:
+      name: "southwest Kansas"
+    filters:
+      crop: "corn"
+      conditions:
+        irrigation: "dryland"
+  tags: ["strategy", "condition_specific", "trial_first"]
+  notes: "Irrigation condition = trial_first with condition filter"
+
+- id: t6_performance_multi_year
+  tier: 6
+  prompt: "What corn has proven itself over the last 3 years in the Quad Cities area?"
+  expected_tool: trial_first_search
+  expected_args:
+    query: "proven corn multi-year"
+    location:
+      name: "Quad Cities"
+    filters:
+      crop: "corn"
+      conditions:
+        years: [2022, 2023, 2024]
+        min_trials: 3
+  tags: ["strategy", "multi_year", "trial_first"]
+  notes: "proven over 3 years = multi-year consistency analysis"
+
+# =============================================================================
+# Comparison → compare_products
+# =============================================================================
+
+- id: t6_compare_explicit
+  tier: 6
+  prompt: "Compare Pioneer P1093 vs DeKalb 64-64 for my farm near Peoria"
+  expected_tool: compare_products
+  expected_args:
+    products: ["Pioneer P1093", "DeKalb 64-64"]
+    location:
+      name: "Peoria"
+    comparison_metrics: ["yield", "consistency"]
+  tags: ["strategy", "comparison", "compare"]
+  notes: "Explicit compare X vs Y = compare_products"
+
+- id: t6_compare_which_is_best
+  tier: 6
+  prompt: "I'm torn between Asgrow 36X7, Pioneer P36A28X, and NK S36-A3X. Which performs best in Story County?"
+  expected_tool: compare_products
+  expected_args:
+    products: ["Asgrow 36X7", "Pioneer P36A28X", "NK S36-A3X"]
+    location:
+      name: "Story County"
+    comparison_metrics: ["yield"]
+  tags: ["strategy", "comparison", "compare"]
+  notes: "torn between + list of products = comparison"
+
+- id: t6_compare_current_vs_alternatives
+  tier: 6
+  prompt: "I've been using DeKalb 52-59. How does it stack up against other similar maturity corn in central Iowa?"
+  expected_tool: compare_products
+  expected_args:
+    products: ["DeKalb 52-59"]
+    location:
+      name: "central Iowa"
+  tags: ["strategy", "validation", "compare"]
+  notes: "stack up against = comparison, though only one product named"
+  acceptable_tools: ["compare_products", "trial_first_search"]
+
+# =============================================================================
+# Ambiguous / Edge Cases
+# =============================================================================
+
+- id: t6_ambiguous_best
+  tier: 6
+  prompt: "What's the best corn for Iowa?"
+  expected_tool: trial_first_search
+  expected_args:
+    query: "best corn"
+    location:
+      name: "Iowa"
+    filters:
+      crop: "corn"
+    rank_by: "yield_advantage"
+  tags: ["strategy", "ambiguous", "trial_first"]
+  notes: "best without context = performance query, trial_first"
+
+- id: t6_ambiguous_recommend
+  tier: 6
+  prompt: "Can you recommend some soybeans for my ground? I farm near Lincoln, Nebraska."
+  expected_tool: product_first_search
+  expected_args:
+    query: "soybean recommendations"
+    location:
+      name: "Lincoln, Nebraska"
+    filters:
+      crop: "soybeans"
+  tags: ["strategy", "ambiguous", "product_first"]
+  notes: "recommend some = discovery intent, want to see options"
+
+- id: t6_subtle_performance_signal
+  tier: 6
+  prompt: "I need corn that won't let me down on my clay bottom ground near the Missouri River"
+  expected_tool: trial_first_search
+  expected_args:
+    query: "reliable corn for clay"
+    location:
+      name: "Missouri River"
+    filters:
+      crop: "corn"
+      conditions:
+        soil_types: ["clay"]
+    rank_by: "consistency"
+  tags: ["strategy", "subtle", "trial_first"]
+  notes: "wont let me down = reliability = consistency, soil mention = condition filter"
+
+- id: t6_brand_plus_performance
+  tier: 6
+  prompt: "How has Pioneer corn been performing in trials around Sioux City?"
+  expected_tool: trial_first_search
+  expected_args:
+    query: "Pioneer corn trial performance"
+    location:
+      name: "Sioux City"
+    filters:
+      crop: "corn"
+  tags: ["strategy", "hybrid", "trial_first"]
+  notes: "Brand mentioned BUT performing in trials = trial_first, not product lookup"
+  acceptable_tools: ["trial_first_search", "product_first_search"]
+
+- id: t6_new_to_area
+  tier: 6
+  prompt: "I just bought land in Boone County. What should I be looking at for corn options?"
+  expected_tool: product_first_search
+  expected_args:
+    query: "corn options for new farm"
+    location:
+      name: "Boone County"
+    filters:
+      crop: "corn"
+  tags: ["strategy", "discovery", "product_first"]
+  notes: "New to area + what options = discovery, want overview"
+
+# =============================================================================
+# Deep Schema Construction
+# =============================================================================
+
+- id: t6_complex_trial_filters
+  tier: 6
+  prompt: "Find me top 20% corn performers from 2023-2024 trials on irrigated ground in western Nebraska, minimum 5 trials"
+  expected_tool: trial_first_search
+  expected_args:
+    query: "top corn irrigated western Nebraska"
+    location:
+      name: "western Nebraska"
+    filters:
+      crop: "corn"
+      conditions:
+        years: [2023, 2024]
+        irrigation: "irrigated"
+        min_trials: 5
+      yield_thresholds:
+        top_percentile: 20
+    rank_by: "top_percentile"
+  tags: ["strategy", "complex_schema", "trial_first"]
+  notes: "Multiple nested filters: years, irrigation, min_trials, percentile"
+
+- id: t6_complex_product_filters
+  tier: 6
+  prompt: "Show me early maturity E3 soybeans from Asgrow or Pioneer available around Champaign"
+  expected_tool: product_first_search
+  expected_args:
+    query: "early maturity E3 soybeans"
+    location:
+      name: "Champaign"
+    filters:
+      crop: "soybeans"
+      brands: ["Asgrow", "Pioneer"]
+      traits: ["E3"]
+      maturity:
+        max_days: 95
+  tags: ["strategy", "complex_schema", "product_first"]
+  notes: "Multiple product filters: brands, traits, maturity range"

@@ -1,0 +1,366 @@
+# Tier 3: Nested object tests
+# Testing: nested objects, lists of objects, optional nested, deep nesting
+
+# =============================================================================
+# CREATE ORDER (customer + items[] + shipping address)
+# =============================================================================
+
+- id: t3_order_simple
+  tier: 3
+  prompt: |
+    Create an order for John Smith (john@example.com) shipping to
+    123 Main St, Boston, MA 02101. Order 2 units of product SKU-001 at $29.99 each.
+  expected_tool: create_order
+  expected_args:
+    customer:
+      name: "John Smith"
+      email: "john@example.com"
+      phone: null
+    items:
+      - product_id: "SKU-001"
+        quantity: 2
+        unit_price: 29.99
+    shipping:
+      street: "123 Main St"
+      city: "Boston"
+      state: "MA"
+      zip_code: "02101"
+      country: "USA"
+  tags: [nested, order, simple]
+
+- id: t3_order_multi_item
+  tier: 3
+  prompt: |
+    Order for Jane Doe (jane.doe@corp.com, phone 555-1234):
+    - 3x WIDGET-A at $15.00
+    - 1x GADGET-B at $45.50
+    Ship to 456 Oak Ave, San Francisco, CA 94102
+  expected_tool: create_order
+  expected_args:
+    customer:
+      name: "Jane Doe"
+      email: "jane.doe@corp.com"
+      phone: "555-1234"
+    items:
+      - product_id: "WIDGET-A"
+        quantity: 3
+        unit_price: 15.00
+      - product_id: "GADGET-B"
+        quantity: 1
+        unit_price: 45.50
+    shipping:
+      street: "456 Oak Ave"
+      city: "San Francisco"
+      state: "CA"
+      zip_code: "94102"
+      country: "USA"
+  tags: [nested, order, multi-item]
+
+- id: t3_order_international
+  tier: 3
+  prompt: |
+    Place order for Hans Mueller (hans@berlin.de) at
+    Friedrichstraße 100, Berlin, 10117, Germany.
+    5 units of EURO-PROD at €25.00
+  expected_tool: create_order
+  expected_args:
+    customer:
+      name: "Hans Mueller"
+      email: "hans@berlin.de"
+      phone: null
+    items:
+      - product_id: "EURO-PROD"
+        quantity: 5
+        unit_price: 25.00
+    shipping:
+      street: "Friedrichstraße 100"
+      city: "Berlin"
+      state: "Berlin"
+      zip_code: "10117"
+      country: "Germany"
+  tags: [nested, order, international]
+
+# =============================================================================
+# SCHEDULE MEETING (participants[] + time_slots[] + optional room)
+# =============================================================================
+
+- id: t3_meeting_simple
+  tier: 3
+  prompt: |
+    Schedule "Project Kickoff" with Alice (alice@co.com) and Bob (bob@co.com).
+    Propose 2025-02-01 from 10:00-11:00 or 14:00-15:00.
+  expected_tool: schedule_meeting
+  expected_args:
+    title: "Project Kickoff"
+    participants:
+      - name: "Alice"
+        email: "alice@co.com"
+        required: true
+      - name: "Bob"
+        email: "bob@co.com"
+        required: true
+    time_slots:
+      - start: "2025-02-01T10:00"
+        end: "2025-02-01T11:00"
+      - start: "2025-02-01T14:00"
+        end: "2025-02-01T15:00"
+    room: null
+  tags: [nested, meeting, no-room]
+
+- id: t3_meeting_with_room
+  tier: 3
+  prompt: |
+    Book "Quarterly Review" in Conference Room A (capacity 20, Building 1 Floor 3).
+    Attendees: CEO (ceo@bigcorp.com, required), CFO (cfo@bigcorp.com, required),
+    and analyst (analyst@bigcorp.com, optional).
+    Time: 2025-03-15 from 09:00 to 12:00.
+  expected_tool: schedule_meeting
+  expected_args:
+    title: "Quarterly Review"
+    participants:
+      - name: "CEO"
+        email: "ceo@bigcorp.com"
+        required: true
+      - name: "CFO"
+        email: "cfo@bigcorp.com"
+        required: true
+      - name: "analyst"
+        email: "analyst@bigcorp.com"
+        required: false
+    time_slots:
+      - start: "2025-03-15T09:00"
+        end: "2025-03-15T12:00"
+    room:
+      name: "Conference Room A"
+      capacity: 20
+      location: "Building 1 Floor 3"
+  tags: [nested, meeting, with-room]
+
+- id: t3_meeting_complex
+  tier: 3
+  prompt: |
+    Set up "Sprint Planning" meeting.
+    Required: Sarah (sarah@dev.io), Mike (mike@dev.io)
+    Optional: Lisa (lisa@design.io)
+    Options: Monday 2025-02-03 2pm-4pm or Tuesday 2025-02-04 10am-12pm
+    Room: Zoom Room (capacity 50)
+  expected_tool: schedule_meeting
+  expected_args:
+    title: "Sprint Planning"
+    participants:
+      - name: "Sarah"
+        email: "sarah@dev.io"
+        required: true
+      - name: "Mike"
+        email: "mike@dev.io"
+        required: true
+      - name: "Lisa"
+        email: "lisa@design.io"
+        required: false
+    time_slots:
+      - start: "2025-02-03T14:00"
+        end: "2025-02-03T16:00"
+      - start: "2025-02-04T10:00"
+        end: "2025-02-04T12:00"
+    room:
+      name: "Zoom Room"
+      capacity: 50
+      location: null
+  tags: [nested, meeting, complex]
+
+# =============================================================================
+# REGISTER EMPLOYEE (deeply nested: employee -> contact -> address)
+# =============================================================================
+
+- id: t3_employee_simple
+  tier: 3
+  prompt: |
+    Register new employee: Tom Wilson in Engineering department.
+    Contact: tom.wilson@company.com, phone 555-9876.
+    Office: 789 Tech Park, Austin, TX 78701.
+    Starting 2025-01-20.
+  expected_tool: register_employee
+  expected_args:
+    employee:
+      name: "Tom Wilson"
+      department: "Engineering"
+      contact:
+        email: "tom.wilson@company.com"
+        phone: "555-9876"
+        address:
+          street: "789 Tech Park"
+          city: "Austin"
+          state: "TX"
+          zip_code: "78701"
+          country: "USA"
+      manager_email: null
+    start_date: "2025-01-20"
+  tags: [nested, employee, deep]
+
+- id: t3_employee_with_manager
+  tier: 3
+  prompt: |
+    Add Emma Chen to Marketing, starting Feb 1 2025.
+    Email emma.chen@biz.com, reports to vp.marketing@biz.com.
+    Work address: 100 Market St, Suite 500, New York, NY 10001.
+  expected_tool: register_employee
+  expected_args:
+    employee:
+      name: "Emma Chen"
+      department: "Marketing"
+      contact:
+        email: "emma.chen@biz.com"
+        phone: null
+        address:
+          street: "100 Market St, Suite 500"
+          city: "New York"
+          state: "NY"
+          zip_code: "10001"
+          country: "USA"
+      manager_email: "vp.marketing@biz.com"
+    start_date: "2025-02-01"
+  tags: [nested, employee, manager]
+
+- id: t3_employee_minimal
+  tier: 3
+  prompt: |
+    Quick add: Alex Rivera, Sales team, alex@sales.co, starts 2025-03-01.
+  expected_tool: register_employee
+  expected_args:
+    employee:
+      name: "Alex Rivera"
+      department: "Sales"
+      contact:
+        email: "alex@sales.co"
+        phone: null
+        address: null
+      manager_email: null
+    start_date: "2025-03-01"
+  tags: [nested, employee, minimal]
+
+# =============================================================================
+# BOOK TRAVEL (origin address + destination address)
+# =============================================================================
+
+- id: t3_travel_oneway
+  tier: 3
+  prompt: |
+    Book one-way travel for Pat Brown (pat@travel.com).
+    From: 200 Airport Blvd, Chicago, IL 60666
+    To: 300 Beach Rd, Miami, FL 33101
+    Departing: 2025-04-10
+  expected_tool: book_travel
+  expected_args:
+    traveler:
+      name: "Pat Brown"
+      email: "pat@travel.com"
+      phone: null
+    origin:
+      street: "200 Airport Blvd"
+      city: "Chicago"
+      state: "IL"
+      zip_code: "60666"
+      country: "USA"
+    destination:
+      street: "300 Beach Rd"
+      city: "Miami"
+      state: "FL"
+      zip_code: "33101"
+      country: "USA"
+    departure_date: "2025-04-10"
+    return_date: null
+  tags: [nested, travel, oneway]
+
+- id: t3_travel_roundtrip
+  tier: 3
+  prompt: |
+    Round trip for Chris Lee (chris.lee@corp.com, 555-4321).
+    Leaving Seattle (500 Pike St, WA 98101) on March 5 2025.
+    Going to Denver (1000 Larimer St, CO 80202).
+    Return March 8 2025.
+  expected_tool: book_travel
+  expected_args:
+    traveler:
+      name: "Chris Lee"
+      email: "chris.lee@corp.com"
+      phone: "555-4321"
+    origin:
+      street: "500 Pike St"
+      city: "Seattle"
+      state: "WA"
+      zip_code: "98101"
+      country: "USA"
+    destination:
+      street: "1000 Larimer St"
+      city: "Denver"
+      state: "CO"
+      zip_code: "80202"
+      country: "USA"
+    departure_date: "2025-03-05"
+    return_date: "2025-03-08"
+  tags: [nested, travel, roundtrip]
+
+# =============================================================================
+# CONTEXTUAL / PROSE STYLE (harder extraction)
+# =============================================================================
+
+- id: t3_order_prose
+  tier: 3
+  prompt: |
+    Hey, I need to order some stuff. I'm Mike Johnson and you can reach me at
+    mike.j@gmail.com. Send it to my house at 42 Elm Street in Portland, Oregon,
+    zip code 97201. I want to get 4 of those BLUE-WIDGET things, they're $12.50 each,
+    and also 2 RED-GADGETS at $8.75.
+  expected_tool: create_order
+  expected_args:
+    customer:
+      name: "Mike Johnson"
+      email: "mike.j@gmail.com"
+      phone: null
+    items:
+      - product_id: "BLUE-WIDGET"
+        quantity: 4
+        unit_price: 12.50
+      - product_id: "RED-GADGET"
+        quantity: 2
+        unit_price: 8.75
+    shipping:
+      street: "42 Elm Street"
+      city: "Portland"
+      state: "Oregon"
+      zip_code: "97201"
+      country: "USA"
+  tags: [nested, order, prose]
+
+- id: t3_meeting_prose
+  tier: 3
+  prompt: |
+    Can you set up a meeting called "Design Review"? I need to have it with
+    the design lead (design.lead@startup.com) and both frontend devs -
+    that's frontend1@startup.com and frontend2@startup.com. The devs are optional
+    but the design lead must be there. We could do it Thursday Feb 6th either
+    in the morning 9-10am or after lunch 2-3pm. Book the Design Lab room,
+    it fits 10 people and it's on the 2nd floor.
+  expected_tool: schedule_meeting
+  expected_args:
+    title: "Design Review"
+    participants:
+      - name: "design lead"
+        email: "design.lead@startup.com"
+        required: true
+      - name: "frontend1"
+        email: "frontend1@startup.com"
+        required: false
+      - name: "frontend2"
+        email: "frontend2@startup.com"
+        required: false
+    time_slots:
+      - start: "2025-02-06T09:00"
+        end: "2025-02-06T10:00"
+      - start: "2025-02-06T14:00"
+        end: "2025-02-06T15:00"
+    room:
+      name: "Design Lab"
+      capacity: 10
+      location: "2nd floor"
+  tags: [nested, meeting, prose]

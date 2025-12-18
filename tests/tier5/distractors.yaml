@@ -1,0 +1,187 @@
+# Tier 5: Multi-tool selection with distractors
+# All 13 tier 5 tools are presented; model must pick the correct one
+
+# =============================================================================
+# SEARCH DISAMBIGUATION (5 search tools available)
+# =============================================================================
+
+- id: t5_search_users
+  tier: 5
+  prompt: |
+    Find all users named "John" in the Engineering department
+  expected_tool: search_users
+  expected_args:
+    query: "John"
+    department: "Engineering"
+  tags: [search, users, disambiguation]
+
+- id: t5_search_documents
+  tier: 5
+  prompt: |
+    Search for documents about "quarterly report"
+  expected_tool: search_documents
+  expected_args:
+    query: "quarterly report"
+    file_type: null
+  tags: [search, documents, disambiguation]
+
+- id: t5_search_calendar
+  tier: 5
+  prompt: |
+    Find meetings about "budget review" scheduled for next week
+  expected_tool: search_calendar
+  expected_args:
+    query: "budget review"
+  tags: [search, calendar, disambiguation]
+
+- id: t5_search_products
+  tier: 5
+  prompt: |
+    Search the catalog for "wireless headphones" under $100
+  expected_tool: search_products_v2
+  expected_args:
+    query: "wireless headphones"
+    max_price: 100
+  tags: [search, products, disambiguation]
+
+- id: t5_search_tickets
+  tier: 5
+  prompt: |
+    Find all open support tickets about "login issues"
+  expected_tool: search_tickets
+  expected_args:
+    query: "login issues"
+    status: "open"
+  tags: [search, tickets, disambiguation]
+
+# =============================================================================
+# SEND/NOTIFY DISAMBIGUATION (4 send tools available)
+# =============================================================================
+
+- id: t5_send_email
+  tier: 5
+  prompt: |
+    Send an email to alice@company.com with subject "Meeting Reminder" about tomorrow's standup
+  expected_tool: send_email
+  expected_args:
+    to: "alice@company.com"
+    subject: "Meeting Reminder"
+  tags: [send, email, disambiguation]
+
+- id: t5_send_slack
+  tier: 5
+  prompt: |
+    Post a message in the #engineering channel saying "Deployment complete!"
+  expected_tool: send_slack
+  expected_args:
+    channel: "#engineering"
+    message: "Deployment complete!"
+  tags: [send, slack, disambiguation]
+
+- id: t5_send_sms
+  tier: 5
+  prompt: |
+    Text +1-555-123-4567 saying "Your order is ready for pickup"
+  expected_tool: send_sms
+  expected_args:
+    phone: "+1-555-123-4567"
+    message: "Your order is ready for pickup"
+  tags: [send, sms, disambiguation]
+
+- id: t5_send_webhook
+  tier: 5
+  prompt: |
+    Send a webhook to https://api.example.com/hooks with payload {"event": "user_signup", "user_id": "123"}
+  expected_tool: send_webhook
+  expected_args:
+    url: "https://api.example.com/hooks"
+    payload:
+      event: "user_signup"
+      user_id: "123"
+  tags: [send, webhook, disambiguation]
+
+# =============================================================================
+# CREATE DISAMBIGUATION (4 create tools available)
+# =============================================================================
+
+- id: t5_create_task
+  tier: 5
+  prompt: |
+    Create a task "Review PR #456" assigned to bob@company.com due 2025-02-01
+  expected_tool: create_task
+  expected_args:
+    title: "Review PR #456"
+    assignee: "bob@company.com"
+    due_date: "2025-02-01"
+  tags: [create, task, disambiguation]
+
+- id: t5_create_event
+  tier: 5
+  prompt: |
+    Schedule a meeting "Team Sync" from 2025-02-01 10:00 to 11:00 with alice@co.com and bob@co.com
+  expected_tool: create_event_v2
+  expected_args:
+    title: "Team Sync"
+    start_time: "2025-02-01T10:00"
+    end_time: "2025-02-01T11:00"
+    attendees:
+      - "alice@co.com"
+      - "bob@co.com"
+  tags: [create, event, disambiguation]
+
+- id: t5_create_note
+  tier: 5
+  prompt: |
+    Create a note titled "Ideas for Q2" with content "1. Expand to Europe 2. Launch mobile app" tagged with planning and q2
+  expected_tool: create_note
+  expected_args:
+    title: "Ideas for Q2"
+    content: "1. Expand to Europe 2. Launch mobile app"
+    tags:
+      - "planning"
+      - "q2"
+  tags: [create, note, disambiguation]
+
+- id: t5_create_reminder
+  tier: 5
+  prompt: |
+    Remind me to "Call the client" at 2025-02-01 14:00
+  expected_tool: create_reminder
+  expected_args:
+    message: "Call the client"
+    remind_at: "2025-02-01T14:00"
+  tags: [create, reminder, disambiguation]
+
+# =============================================================================
+# AMBIGUOUS PROMPTS (could match multiple tools)
+# =============================================================================
+
+- id: t5_ambiguous_meeting
+  tier: 5
+  prompt: |
+    I need to find that meeting with Sarah about the budget
+  expected_tool: search_calendar
+  expected_args:
+    query: "budget"
+  acceptable_tools: [search_calendar, search_documents]
+  tags: [ambiguous, could-be-calendar-or-docs]
+
+- id: t5_ambiguous_contact
+  tier: 5
+  prompt: |
+    Message the team about the release
+  expected_tool: send_slack
+  expected_args:
+    message: "release"
+  acceptable_tools: [send_slack, send_email]
+  tags: [ambiguous, could-be-slack-or-email]
+
+- id: t5_ambiguous_todo
+  tier: 5
+  prompt: |
+    Add "finish the report" to my list for Friday
+  expected_tool: create_task
+  expected_args:
+    title: "finish the report"
+  acceptable_tools: [create_task, create_reminder]
+  tags: [ambiguous, could-be-task-or-reminder]

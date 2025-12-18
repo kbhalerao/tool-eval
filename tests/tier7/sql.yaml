@@ -1,0 +1,223 @@
+# Tier 7: Text-to-SQL tests against Sakila database
+# Tests range from simple counts to complex multi-join aggregations
+
+# --- SIMPLE: Single table, basic aggregation ---
+
+- id: t7_count_films
+  tier: 7
+  prompt: "How many films are in the database?"
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT COUNT(*) FROM film"
+  expected_result: 1000
+  tags: [simple, count]
+
+- id: t7_count_pg13
+  tier: 7
+  prompt: "How many PG-13 rated films are there?"
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT COUNT(*) FROM film WHERE rating = 'PG-13'"
+  expected_result: 223
+  tags: [simple, filter]
+
+- id: t7_avg_rental_rate
+  tier: 7
+  prompt: "What is the average rental rate for films?"
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT AVG(rental_rate) FROM film"
+  expected_result: 2.98
+  result_tolerance: 0.01
+  tags: [simple, avg]
+
+- id: t7_longest_film
+  tier: 7
+  prompt: "What is the longest film in the database? Give me the title and length."
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT title, length FROM film ORDER BY length DESC LIMIT 1"
+  expected_result_contains: ["CHICAGO NORTH", 185]
+  tags: [simple, sort]
+
+# --- MEDIUM: Two table joins ---
+
+- id: t7_actor_film_count
+  tier: 7
+  prompt: "How many films has the actor Penelope Guiness appeared in?"
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT COUNT(*) FROM film f JOIN film_actor fa ON f.film_id = fa.film_id JOIN actor a ON fa.actor_id = a.actor_id WHERE a.first_name = 'PENELOPE' AND a.last_name = 'GUINESS'"
+  expected_result: 19
+  tags: [medium, join, filter]
+
+- id: t7_films_in_category
+  tier: 7
+  prompt: "How many films are in the Action category?"
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT COUNT(*) FROM film f JOIN film_category fc ON f.film_id = fc.film_id JOIN category c ON fc.category_id = c.category_id WHERE c.name = 'Action'"
+  expected_result: 64
+  tags: [medium, join, filter]
+
+- id: t7_customer_count_by_store
+  tier: 7
+  prompt: "How many customers are registered at store 1?"
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT COUNT(*) FROM customer WHERE store_id = 1"
+  expected_result: 326
+  tags: [medium, filter]
+
+- id: t7_actors_in_film
+  tier: 7
+  prompt: "List all actors in the film Academy Dinosaur"
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT a.first_name, a.last_name FROM actor a JOIN film_actor fa ON a.actor_id = fa.actor_id JOIN film f ON fa.film_id = f.film_id WHERE f.title = 'ACADEMY DINOSAUR'"
+  expected_result_count: 10
+  tags: [medium, join]
+
+# --- HARD: Multi-table joins with aggregation ---
+
+- id: t7_revenue_by_store
+  tier: 7
+  prompt: "What is the total revenue for store 1?"
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT SUM(p.amount) FROM payment p JOIN rental r ON p.rental_id = r.rental_id JOIN inventory i ON r.inventory_id = i.inventory_id WHERE i.store_id = 1"
+  expected_result: 33679.79
+  result_tolerance: 0.01
+  tags: [hard, join, aggregation]
+
+- id: t7_top_category_revenue
+  tier: 7
+  prompt: "Which film category generates the most revenue?"
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT c.name, SUM(p.amount) as revenue FROM payment p JOIN rental r ON p.rental_id = r.rental_id JOIN inventory i ON r.inventory_id = i.inventory_id JOIN film f ON i.film_id = f.film_id JOIN film_category fc ON f.film_id = fc.film_id JOIN category c ON fc.category_id = c.category_id GROUP BY c.name ORDER BY revenue DESC LIMIT 1"
+  expected_result_contains: ["Sports"]
+  tags: [hard, join, aggregation, group_by]
+
+- id: t7_most_prolific_actor
+  tier: 7
+  prompt: "Which actor has appeared in the most films?"
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT a.first_name, a.last_name, COUNT(*) as film_count FROM actor a JOIN film_actor fa ON a.actor_id = fa.actor_id GROUP BY a.actor_id ORDER BY film_count DESC LIMIT 1"
+  expected_result_contains: ["GINA", "DEGENERES"]
+  tags: [hard, join, aggregation, group_by]
+
+- id: t7_top_customers
+  tier: 7
+  prompt: "Who are the top 5 customers by total spending?"
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT c.first_name, c.last_name, SUM(p.amount) as total FROM customer c JOIN payment p ON c.customer_id = p.customer_id GROUP BY c.customer_id ORDER BY total DESC LIMIT 5"
+  expected_result_count: 5
+  tags: [hard, join, aggregation, group_by]
+
+# --- EXPERT: Complex queries with multiple conditions ---
+
+- id: t7_actor_category_combo
+  tier: 7
+  prompt: "Which actor has appeared in the most Action films?"
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT a.first_name, a.last_name, COUNT(*) as action_films FROM actor a JOIN film_actor fa ON a.actor_id = fa.actor_id JOIN film f ON fa.film_id = f.film_id JOIN film_category fc ON f.film_id = fc.film_id JOIN category c ON fc.category_id = c.category_id WHERE c.name = 'Action' GROUP BY a.actor_id ORDER BY action_films DESC LIMIT 1"
+  expected_result_count: 1
+  tags: [expert, join, filter, aggregation]
+
+- id: t7_revenue_by_rating
+  tier: 7
+  prompt: "What is the total revenue broken down by film rating?"
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT f.rating, SUM(p.amount) as revenue FROM payment p JOIN rental r ON p.rental_id = r.rental_id JOIN inventory i ON r.inventory_id = i.inventory_id JOIN film f ON i.film_id = f.film_id GROUP BY f.rating ORDER BY revenue DESC"
+  expected_result_count: 5
+  tags: [expert, join, aggregation, group_by]
+
+- id: t7_never_rented
+  tier: 7
+  prompt: "How many films have never been rented?"
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT COUNT(*) FROM film f WHERE NOT EXISTS (SELECT 1 FROM inventory i JOIN rental r ON i.inventory_id = r.inventory_id WHERE i.film_id = f.film_id)"
+  tags: [expert, subquery, negation]
+
+- id: t7_customer_by_country
+  tier: 7
+  prompt: "How many customers are from Canada?"
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT COUNT(*) FROM customer cu JOIN address a ON cu.address_id = a.address_id JOIN city ci ON a.city_id = ci.city_id JOIN country co ON ci.country_id = co.country_id WHERE co.country = 'Canada'"
+  expected_result: 5
+  tags: [expert, join, geographic]
+
+# --- MASTER: Window functions, CTEs, self-joins ---
+
+- id: t7_running_total
+  tier: 7
+  prompt: "Show the running total of payments for customer 1, ordered by payment date. Include payment_date, amount, and running_total columns."
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT payment_date, amount, SUM(amount) OVER (ORDER BY payment_date) as running_total FROM payment WHERE customer_id = 1"
+  tags: [master, window_function]
+
+- id: t7_customer_rank
+  tier: 7
+  prompt: "Rank all customers by their total spending. Show customer_id, total spent, and their rank."
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT customer_id, SUM(amount) as total, RANK() OVER (ORDER BY SUM(amount) DESC) as rank FROM payment GROUP BY customer_id"
+  tags: [master, window_function, rank]
+
+- id: t7_above_avg_spenders
+  tier: 7
+  prompt: "How many customers have spent more than the average customer? Use a CTE to calculate this."
+  expected_tool: execute_sql
+  expected_args:
+    sql: "WITH customer_totals AS (SELECT customer_id, SUM(amount) as total FROM payment GROUP BY customer_id) SELECT COUNT(*) FROM customer_totals WHERE total > (SELECT AVG(total) FROM customer_totals)"
+  expected_result: 285
+  tags: [master, cte, subquery]
+
+- id: t7_actor_pairs
+  tier: 7
+  prompt: "Which pair of actors have appeared together in the most films? Show both actor names and the count."
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT a1.first_name || ' ' || a1.last_name as actor1, a2.first_name || ' ' || a2.last_name as actor2, COUNT(*) as films_together FROM film_actor fa1 JOIN film_actor fa2 ON fa1.film_id = fa2.film_id AND fa1.actor_id < fa2.actor_id JOIN actor a1 ON fa1.actor_id = a1.actor_id JOIN actor a2 ON fa2.actor_id = a2.actor_id GROUP BY fa1.actor_id, fa2.actor_id ORDER BY films_together DESC LIMIT 1"
+  expected_result_contains: ["JULIA MCQUEEN", "HENRY BERRY", 7]
+  tags: [master, self_join, aggregation]
+
+- id: t7_percentile_spending
+  tier: 7
+  prompt: "For each customer, show their total spending and what percentile they fall into (use NTILE with 4 buckets/quartiles)."
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT customer_id, SUM(amount) as total, NTILE(4) OVER (ORDER BY SUM(amount)) as quartile FROM payment GROUP BY customer_id"
+  tags: [master, window_function, ntile]
+
+- id: t7_monthly_revenue_growth
+  tier: 7
+  prompt: "Show monthly revenue with month-over-month growth. Include month, revenue, previous month revenue, and growth percentage."
+  expected_tool: execute_sql
+  expected_args:
+    sql: "WITH monthly AS (SELECT strftime('%Y-%m', payment_date) as month, SUM(amount) as revenue FROM payment GROUP BY strftime('%Y-%m', payment_date)) SELECT month, revenue, LAG(revenue) OVER (ORDER BY month) as prev_revenue, ROUND(100.0 * (revenue - LAG(revenue) OVER (ORDER BY month)) / LAG(revenue) OVER (ORDER BY month), 2) as growth_pct FROM monthly"
+  tags: [master, cte, window_function, lag]
+
+- id: t7_category_revenue_share
+  tier: 7
+  prompt: "For each film category, show the total revenue and what percentage of total revenue it represents."
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT c.name, SUM(p.amount) as revenue, ROUND(100.0 * SUM(p.amount) / (SELECT SUM(amount) FROM payment), 2) as pct_of_total FROM payment p JOIN rental r ON p.rental_id = r.rental_id JOIN inventory i ON r.inventory_id = i.inventory_id JOIN film f ON i.film_id = f.film_id JOIN film_category fc ON f.film_id = fc.film_id JOIN category c ON fc.category_id = c.category_id GROUP BY c.name ORDER BY revenue DESC"
+  tags: [master, subquery, percentage]
+
+- id: t7_dense_rank_films
+  tier: 7
+  prompt: "Rank films by rental count using DENSE_RANK. Show film title, rental count, and dense rank. Include ties."
+  expected_tool: execute_sql
+  expected_args:
+    sql: "SELECT f.title, COUNT(r.rental_id) as rental_count, DENSE_RANK() OVER (ORDER BY COUNT(r.rental_id) DESC) as rank FROM film f JOIN inventory i ON f.film_id = i.film_id JOIN rental r ON i.inventory_id = r.inventory_id GROUP BY f.film_id ORDER BY rental_count DESC"
+  tags: [master, window_function, dense_rank]

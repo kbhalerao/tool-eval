@@ -1,0 +1,250 @@
+# Tier 2: Structured parameter tests
+# Testing: dates, lists, optionals, enums
+# Prompt complexity: direct → contextual → ambiguous
+
+# =============================================================================
+# DATE PARSING (create_event, set_reminder)
+# =============================================================================
+
+# --- Direct date formats ---
+- id: t2_date_iso
+  tier: 2
+  prompt: "Create an event called 'Team Sync' on 2025-01-15 with attendees alice@co.com and bob@co.com"
+  expected_tool: create_event
+  expected_args:
+    title: "Team Sync"
+    date: "2025-01-15"
+    attendees: ["alice@co.com", "bob@co.com"]
+  tags: [date, direct, iso-format]
+
+- id: t2_date_natural
+  tier: 2
+  prompt: "Schedule a meeting called 'Q1 Planning' for January 20th, 2025 with the marketing team (sarah@co.com, mike@co.com)"
+  expected_tool: create_event
+  expected_args:
+    title: "Q1 Planning"
+    date: "2025-01-20"
+    attendees: ["sarah@co.com", "mike@co.com"]
+  tags: [date, direct, natural-format]
+
+- id: t2_date_informal
+  tier: 2
+  prompt: "Set a reminder for 'Submit report' on Jan 5 2025"
+  expected_tool: set_reminder
+  expected_args:
+    title: "Submit report"
+    date: "2025-01-05"
+  tags: [date, direct, informal]
+
+# NOTE: Relative date tests removed - models don't know today's date
+# To test relative dates, inject current date into system prompt
+
+# =============================================================================
+# LIST EXTRACTION (create_event attendees)
+# =============================================================================
+
+# --- Direct list ---
+- id: t2_list_explicit
+  tier: 2
+  prompt: "Create event 'Standup' on 2025-02-01 with attendees: john@x.com, jane@x.com, bob@x.com"
+  expected_tool: create_event
+  expected_args:
+    title: "Standup"
+    date: "2025-02-01"
+    attendees: ["john@x.com", "jane@x.com", "bob@x.com"]
+  tags: [list, direct, explicit]
+
+- id: t2_list_single
+  tier: 2
+  prompt: "Schedule '1:1 with boss' on 2025-02-10 with manager@company.com"
+  expected_tool: create_event
+  expected_args:
+    title: "1:1 with boss"
+    date: "2025-02-10"
+    attendees: ["manager@company.com"]
+  tags: [list, direct, single-item]
+
+# --- Contextual list (natural language) ---
+- id: t2_list_prose
+  tier: 2
+  prompt: "I need to set up a brainstorm session called 'Product Ideas' on March 1st 2025. Invite the design team - that's anna@design.co and carlos@design.co"
+  expected_tool: create_event
+  expected_args:
+    title: "Product Ideas"
+    date: "2025-03-01"
+    attendees: ["anna@design.co", "carlos@design.co"]
+  tags: [list, contextual, prose]
+
+- id: t2_list_and_separated
+  tier: 2
+  prompt: "Create 'Lunch meeting' on 2025-03-15 with alex@foo.com and sam@foo.com and jordan@foo.com"
+  expected_tool: create_event
+  expected_args:
+    title: "Lunch meeting"
+    date: "2025-03-15"
+    attendees: ["alex@foo.com", "sam@foo.com", "jordan@foo.com"]
+  tags: [list, contextual, and-separated]
+
+# =============================================================================
+# OPTIONAL PARAMETERS (search_products)
+# =============================================================================
+
+# --- No optionals ---
+- id: t2_opt_none
+  tier: 2
+  prompt: "Search for laptops"
+  expected_tool: search_products
+  expected_args:
+    query: "laptops"
+    max_price: null
+    category: null
+  tags: [optional, direct, none-provided]
+
+# --- One optional ---
+- id: t2_opt_price_only
+  tier: 2
+  prompt: "Find headphones under $100"
+  expected_tool: search_products
+  expected_args:
+    query: "headphones"
+    max_price: 100
+    category: null
+  tags: [optional, direct, price-only]
+
+- id: t2_opt_category_only
+  tier: 2
+  prompt: "Search for running shoes in the sports category"
+  expected_tool: search_products
+  expected_args:
+    query: "running shoes"
+    max_price: null
+    category: "sports"
+  tags: [optional, direct, category-only]
+
+# --- Both optionals ---
+- id: t2_opt_both
+  tier: 2
+  prompt: "Find me a mechanical keyboard under $150 in electronics"
+  expected_tool: search_products
+  expected_args:
+    query: "mechanical keyboard"
+    max_price: 150
+    category: "electronics"
+  tags: [optional, direct, both]
+
+# --- Contextual optional ---
+- id: t2_opt_contextual_price
+  tier: 2
+  prompt: "I'm looking for a budget wireless mouse, nothing over fifty dollars"
+  expected_tool: search_products
+  expected_args:
+    query: "wireless mouse"
+    max_price: 50
+    category: null
+  tags: [optional, contextual, price-inferred]
+
+- id: t2_opt_contextual_both
+  tier: 2
+  prompt: "My kid needs a backpack for school, preferably under $40 from the kids section"
+  expected_tool: search_products
+  expected_args:
+    query: "backpack"
+    max_price: 40
+    category: "kids"
+  tags: [optional, contextual, both-inferred]
+
+# =============================================================================
+# ENUM / LITERAL (send_message priority)
+# =============================================================================
+
+# --- Direct enum ---
+- id: t2_enum_explicit_high
+  tier: 2
+  prompt: "Send a high priority email to boss@company.com with subject 'Urgent: Server down' and body 'The production server is not responding'"
+  expected_tool: send_message
+  expected_args:
+    to: "boss@company.com"
+    subject: "Urgent: Server down"
+    body: "The production server is not responding"
+    priority: "high"
+  tags: [enum, direct, high]
+
+- id: t2_enum_explicit_low
+  tier: 2
+  prompt: "Send a low priority message to newsletter@list.com, subject 'Weekly digest', body 'Here are this week's updates'"
+  expected_tool: send_message
+  expected_args:
+    to: "newsletter@list.com"
+    subject: "Weekly digest"
+    body: "Here are this week's updates"
+    priority: "low"
+  tags: [enum, direct, low]
+
+# --- Default enum (should use 'normal') ---
+- id: t2_enum_default
+  tier: 2
+  prompt: "Email support@vendor.com about 'License renewal' saying 'Please send renewal quote'"
+  expected_tool: send_message
+  expected_args:
+    to: "support@vendor.com"
+    subject: "License renewal"
+    body: "Please send renewal quote"
+    priority: "normal"
+  tags: [enum, default, implicit-normal]
+
+# --- Contextual enum (infer from tone) ---
+- id: t2_enum_contextual_urgent
+  tier: 2
+  prompt: "ASAP - email cto@startup.com, subject 'Security breach detected', tell them 'We found unauthorized access in the logs, need immediate review'"
+  expected_tool: send_message
+  expected_args:
+    to: "cto@startup.com"
+    subject: "Security breach detected"
+    body: "We found unauthorized access in the logs, need immediate review"
+    priority: "high"
+  tags: [enum, contextual, urgent-tone]
+
+- id: t2_enum_contextual_fyi
+  tier: 2
+  prompt: "Just FYI - send a note to team@company.com, subject 'Office closure Friday', message 'The office will be closed this Friday for maintenance'"
+  expected_tool: send_message
+  expected_args:
+    to: "team@company.com"
+    subject: "Office closure Friday"
+    body: "The office will be closed this Friday for maintenance"
+    priority: "low"
+  tags: [enum, contextual, fyi-tone]
+
+# =============================================================================
+# OPTIONAL LIST (set_reminder tags)
+# =============================================================================
+
+- id: t2_optlist_none
+  tier: 2
+  prompt: "Remind me on 2025-04-01 to renew passport"
+  expected_tool: set_reminder
+  expected_args:
+    title: "renew passport"
+    date: "2025-04-01"
+    tags: null
+  tags: [optional-list, direct, none]
+
+- id: t2_optlist_provided
+  tier: 2
+  prompt: "Set reminder 'Pay rent' for 2025-04-01 with tags: finance, monthly, important"
+  expected_tool: set_reminder
+  expected_args:
+    title: "Pay rent"
+    date: "2025-04-01"
+    tags: ["finance", "monthly", "important"]
+  tags: [optional-list, direct, provided]
+
+- id: t2_optlist_contextual
+  tier: 2
+  prompt: "Remind me on April 15 2025 to file taxes - tag it as finance and deadline"
+  expected_tool: set_reminder
+  expected_args:
+    title: "file taxes"
+    date: "2025-04-15"
+    tags: ["finance", "deadline"]
+  tags: [optional-list, contextual, inferred]

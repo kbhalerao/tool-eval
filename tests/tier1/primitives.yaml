@@ -1,0 +1,119 @@
+# Tier 1: Primitive parameter tests
+# These test basic parameter extraction with simple types
+
+# --- Weather tool tests ---
+
+- id: t1_weather_simple
+  tier: 1
+  prompt: "What's the weather in San Francisco?"
+  expected_tool: get_weather
+  expected_args:
+    city: "San Francisco"
+  tags: [primitive, extraction, simple]
+
+- id: t1_weather_abbreviation
+  tier: 1
+  prompt: "Get me the weather for NYC"
+  expected_tool: get_weather
+  expected_args:
+    city: "New York City"
+  tags: [primitive, extraction, abbreviation]
+
+- id: t1_weather_informal
+  tier: 1
+  prompt: "How's the weather looking in LA today?"
+  expected_tool: get_weather
+  expected_args:
+    city: "Los Angeles"
+  tags: [primitive, extraction, informal]
+
+- id: t1_weather_international
+  tier: 1
+  prompt: "What's the weather in Tokyo, Japan?"
+  expected_tool: get_weather
+  expected_args:
+    city: "Tokyo"
+  tags: [primitive, extraction, international]
+
+# --- Add numbers tests ---
+
+- id: t1_add_simple
+  tier: 1
+  prompt: "Add 5 and 3"
+  expected_tool: add_numbers
+  expected_args:
+    a: 5
+    b: 3
+  tags: [primitive, math, simple]
+
+- id: t1_add_words
+  tier: 1
+  prompt: "What is twenty plus fifteen?"
+  expected_tool: add_numbers
+  expected_args:
+    a: 20
+    b: 15
+  tags: [primitive, math, word-numbers]
+
+- id: t1_add_negative
+  tier: 1
+  prompt: "Calculate -10 + 25"
+  expected_tool: add_numbers
+  expected_args:
+    a: -10
+    b: 25
+  tags: [primitive, math, negative]
+
+- id: t1_add_context
+  tier: 1
+  prompt: "I have 42 apples and my friend gives me 18 more. How many do I have?"
+  expected_tool: add_numbers
+  expected_args:
+    a: 42
+    b: 18
+  tags: [primitive, math, context]
+
+# --- Email validation tests ---
+
+- id: t1_email_valid
+  tier: 1
+  prompt: "Is john.doe@example.com a valid email?"
+  expected_tool: is_valid_email
+  expected_args:
+    email: "john.doe@example.com"
+  tags: [primitive, validation, simple]
+
+- id: t1_email_check
+  tier: 1
+  prompt: "Check if this email is valid: test@company.org"
+  expected_tool: is_valid_email
+  expected_args:
+    email: "test@company.org"
+  tags: [primitive, validation, simple]
+
+- id: t1_email_suspicious
+  tier: 1
+  prompt: "Does this look like a real email address: not-an-email"
+  expected_tool: is_valid_email
+  expected_args:
+    email: "not-an-email"
+  tags: [primitive, validation, invalid]
+
+# --- Mixed / edge cases ---
+
+- id: t1_weather_question_form
+  tier: 1
+  prompt: "Could you tell me what the temperature is like in Boston?"
+  expected_tool: get_weather
+  expected_args:
+    city: "Boston"
+  tags: [primitive, extraction, polite]
+
+- id: t1_add_sum
+  tier: 1
+  prompt: "sum of 100 and 200"
+  expected_tool: add_numbers
+  expected_args:
+    a: 100
+    b: 200
+  tags: [primitive, math, terse]
